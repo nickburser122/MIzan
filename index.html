@@ -4,13 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ميزان — Mizan</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23D97757'/%3E%3Cpath d='M16 12L19.5 19H12.5Z' fill='%23FAF9F5'/%3E%3Cline x1='5.5' y1='12' x2='26.5' y2='12' stroke='%23FAF9F5' stroke-width='2.1' stroke-linecap='round'/%3E%3Ccircle cx='5.5' cy='12' r='2.6' fill='%23FAF9F5'/%3E%3Ccircle cx='26.5' cy='12' r='2.6' fill='%23FAF9F5'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23DD7758'/%3E%3Cg stroke='%23FFFFFF' stroke-width='7' stroke-linecap='round' stroke-linejoin='round' fill='none'%3E%3Cpath d='M 40 74 L 60 74 M 50 74 L 50 40'/%3E%3Cpath d='M 24 58 L 24 26 L 50 40 L 76 26 L 76 58'/%3E%3Cpath d='M 12 58 Q 24 70 36 58'/%3E%3Cpath d='M 64 58 Q 76 70 88 58'/%3E%3C/g%3E%3C/svg%3E">
+<script>(function(){try{var m=localStorage.getItem('themePreference');if(m==='light'||m==='dark')document.documentElement.setAttribute('data-theme',m);}catch(e){}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" onerror="window.__fontLoadFailed=true">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" onerror="window.__sheetJsLoadFailed=true"></script>
 <style>
 :root {
+  color-scheme: light;
   --bg: #F0EEE6;
   --surface: #FAF9F5;
   --surface-sunk: #EAE7DD;
@@ -46,6 +48,46 @@
   --pad-card: 20px;
   --pad-panel: 28px;
 }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #17140F;
+    --surface: #221E18;
+    --surface-sunk: #1C1914;
+    --ink: #F1EEE7;
+    --ink-2: #C7C3B9;
+    --ink-3: #9C978B;
+    --ink-4: #7A7468;
+    --border: #3A342C;
+    --border-strong: #574F41;
+    --accent-soft: #3A2A1E;
+    --success: #86AC8B;
+    --warning: #D9AE58;
+    --danger: #E08978;
+    --success-soft: #223027;
+    --warning-soft: #332B18;
+    --danger-soft: #3A2420;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #17140F;
+  --surface: #221E18;
+  --surface-sunk: #1C1914;
+  --ink: #F1EEE7;
+  --ink-2: #C7C3B9;
+  --ink-3: #9C978B;
+  --ink-4: #7A7468;
+  --border: #3A342C;
+  --border-strong: #574F41;
+  --accent-soft: #3A2A1E;
+  --success: #86AC8B;
+  --warning: #D9AE58;
+  --danger: #E08978;
+  --success-soft: #223027;
+  --warning-soft: #332B18;
+  --danger-soft: #3A2420;
+}
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
@@ -54,6 +96,10 @@ html, body {
   color: var(--ink);
   font-family: var(--font-arabic);
   font-variant-numeric: tabular-nums;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+.card, .modal, .modal-backdrop {
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 #app {
   min-height: 100vh;
@@ -98,12 +144,12 @@ html, body {
   margin-bottom: 20px;
 }
 .selftest-summary-ok {
-  background: var(--accent-soft);
+  background: var(--success-soft);
   color: var(--success);
   border: 1px solid var(--border);
 }
 .selftest-summary-bad {
-  background: #F6E4E1;
+  background: var(--danger-soft);
   color: var(--danger);
   border: 1px solid var(--border);
 }
@@ -134,11 +180,11 @@ html, body {
   margin-top: 2px;
 }
 .selftest-row-pass .selftest-badge {
-  background: var(--accent-soft);
+  background: var(--success-soft);
   color: var(--success);
 }
 .selftest-row-fail .selftest-badge {
-  background: #F6E4E1;
+  background: var(--danger-soft);
   color: var(--danger);
 }
 .selftest-body { flex: 1 1 auto; min-width: 0; }
@@ -164,9 +210,6 @@ html, body {
   max-width: var(--max-content);
   margin: 0 auto;
   padding: 32px;
-}
-.page.page-narrow {
-  max-width: 760px;
 }
 @media (max-width: 640px) {
   .page { padding: 20px; }
@@ -215,7 +258,7 @@ html, body {
 }
 .btn-danger-ghost:hover { background: var(--danger-soft); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn:focus-visible, .field-input:focus-visible, .chip:focus-visible, a:focus-visible, .table-sort-btn:focus-visible, .custom-select-trigger:focus-visible, .custom-select-option:focus-visible {
+.btn:focus-visible, .field-input:focus-visible, .chip:focus-visible, a:focus-visible, .table-sort-btn:focus-visible, .custom-select-trigger:focus-visible, .custom-select-option:focus-visible, .theme-switch-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -624,8 +667,9 @@ input[type="number"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn, .weight-bar-fill, .stepper-line-fill, .stepper-dot,
+  html, body, .btn, .weight-bar-fill, .stepper-line-fill, .stepper-dot,
   .data-table tbody tr, .chip, .field-input, .skeleton, .toast,
+  .card, .modal, .modal-backdrop,
   .custom-select-popup, .custom-select-trigger .cs-chevron {
     animation: none !important;
     transition: none !important;
@@ -634,8 +678,13 @@ input[type="number"] {
 
 .app-header { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:24px; }
 .brand { display:flex; align-items:center; gap:12px; }
-.brand-mark { width:42px; height:42px; display:grid; place-items:center; border-radius:14px; background:var(--accent); color:#fff; font-size:20px; font-weight:700; }
-.brand-mark .icon { width:22px; height:22px; }
+.brand-mark { width:42px; height:42px; display:grid; place-items:center; border-radius:14px; overflow:hidden; flex-shrink:0; box-shadow:var(--shadow-flat); }
+.brand-mark svg { width:100%; height:100%; display:block; }
+.theme-switch { display:inline-flex; align-items:center; gap:2px; padding:3px; border-radius:var(--radius-pill); background:var(--surface-sunk); border:1px solid var(--border); }
+.theme-switch-btn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:var(--radius-pill); border:none; background:transparent; color:var(--ink-3); cursor:pointer; transition:background-color var(--dur-hover) var(--ease-hover), color var(--dur-hover) var(--ease-hover); }
+.theme-switch-btn:hover { color:var(--ink); }
+.theme-switch-btn.active { background:var(--surface); color:var(--accent); box-shadow:var(--shadow-flat); }
+.theme-switch-btn .icon { width:16px; height:16px; }
 .brand-title { font-size:20px; font-weight:700; }
 .brand-subtitle { color:var(--ink-3); font-size:12px; margin-top:2px; }
 .brand-link { color:var(--ink-4); text-decoration:none; border-bottom:1px dotted var(--ink-4); transition:color var(--dur-hover) var(--ease-hover), border-color var(--dur-hover) var(--ease-hover); }
@@ -1320,9 +1369,11 @@ var Icons = (function () {
     lock: '<rect x="4.5" y="9" width="11" height="8" rx="1.5"/><path d="M6.5 9V6a3.5 3.5 0 017 0v3" stroke-linecap="round"/>',
     search: '<circle cx="8.5" cy="8.5" r="5.5"/><path d="M16.5 16.5l-3.6-3.6" stroke-linecap="round"/>',
     close: '<path d="M5 5l10 10M15 5L5 15" stroke-linecap="round"/>',
-    scale: '<path d="M10 7.5L13.5 14.5H6.5Z" fill="currentColor" stroke="none"/><path d="M3.5 7.5h13" stroke-linecap="round"/><circle cx="3.5" cy="7.5" r="1.7" fill="currentColor" stroke="none"/><circle cx="16.5" cy="7.5" r="1.7" fill="currentColor" stroke="none"/>',
     check: '<path d="M4 10.5l3.5 3.5L16 5.5" stroke-linecap="round" stroke-linejoin="round"/>',
-    chevronDown: '<path d="M5 8l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"/>'
+    chevronDown: '<path d="M5 8l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"/>',
+    sun: '<circle cx="10" cy="10" r="3.5"/><path d="M10 2.5v2M10 15.5v2M3.5 10h2M14.5 10h2M5.64 5.64l1.42 1.42M12.94 12.94l1.42 1.42M5.64 14.36l1.42-1.42M12.94 7.06l1.42-1.42" stroke-linecap="round"/>',
+    moon: '<path d="M16.5 12.6A6.8 6.8 0 117.9 3.8a5.3 5.3 0 008.6 8.8z" stroke-linejoin="round"/>',
+    monitor: '<rect x="3" y="4" width="14" height="9.5" rx="1.5"/><path d="M7.5 17h5M10 13.5V17" stroke-linecap="round"/>'
   };
 
   function svg(name, extraAttrs) {
@@ -2027,6 +2078,7 @@ var SelfTest = (function () {
 var APP_NAME = 'ميزان';
 var APP_NAME_LATIN = 'Mizan';
 var APP_VERSION = '1.0.0';
+var BRAND_MARK_SVG = '<svg viewBox="0 0 100 100" width="42" height="42" role="img" aria-label="' + APP_NAME + '"><rect width="100" height="100" rx="22" fill="#DD7758"/><g stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M 40 74 L 60 74 M 50 74 L 50 40"/><path d="M 24 58 L 24 26 L 50 40 L 76 26 L 76 58"/><path d="M 12 58 Q 24 70 36 58"/><path d="M 64 58 Q 76 70 88 58"/></g></svg>';
 
 var App = (function () {
   'use strict';
@@ -2037,6 +2089,7 @@ var App = (function () {
   var importing = false;
   var sortKey = null;
   var sortDir = 1;
+  var themeMode = 'system';
 
   function el(tag, className, children) {
     var node = document.createElement(tag);
@@ -2335,13 +2388,14 @@ var App = (function () {
 
   function header() {
     var header = el('header', 'app-header');
-    var brand = el('div', 'brand'); brand.appendChild(el('div', 'brand-mark', [iconEl('scale')]));
+    var brand = el('div', 'brand'); var mark = el('div', 'brand-mark'); mark.innerHTML = BRAND_MARK_SVG; brand.appendChild(mark);
     var copy = el('div'); copy.appendChild(el('div', 'brand-title', [APP_NAME]));
     var subtitle = el('div', 'brand-subtitle', ['حساب عادل قابل للمراجعة — يعمل من ملف واحد ']);
     var fullAppLink = el('a', 'brand-link', [num('· قسمة ↗')]); fullAppLink.href = 'https://shareholders-coral.vercel.app/'; fullAppLink.target = '_blank'; fullAppLink.rel = 'noopener noreferrer';
     subtitle.appendChild(fullAppLink);
     copy.appendChild(subtitle); brand.appendChild(copy);
     var tools = el('div', 'toolbar');
+    tools.appendChild(themeSwitch());
     var settings = el('button', 'btn btn-ghost', [iconEl('settings'), 'الإعدادات']); settings.addEventListener('click', openSettings); tools.appendChild(settings);
     var save = el('button', 'btn btn-ghost', ['حفظ المشروع']); save.addEventListener('click', saveProject); tools.appendChild(save);
     header.appendChild(brand); header.appendChild(tools); return header;
@@ -3194,8 +3248,39 @@ var App = (function () {
     return el('div', 'notice', [messages.join(' ')]);
   }
 
-  function render() { closeOpenDropdown(); var snap = capturePageState(); container.innerHTML = ''; var pageCls = 'page' + (state.screen === 4 ? ' page-dashboard' : '') + (state.screen <= 2 ? ' page-narrow' : ''); var page = el('main', pageCls); page.appendChild(header()); page.appendChild(buildStepper()); var content = state.screen === 0 ? buildUpload() : (state.screen === 1 ? buildMapping() : (state.screen === 2 ? buildAmounts() : (state.screen === 3 ? buildAllocation() : (state.screen === 4 ? buildDashboard() : buildExport())))); var stack = el('div', 'screen-stack'); var loadNotice = loadFailureNotice(); if (loadNotice) stack.appendChild(loadNotice); stack.appendChild(content); page.appendChild(stack); container.appendChild(page); restorePageState(snap); }
-  function boot(target) { container = target; state = makeInitialState(); try { state.tierMappings = JSON.parse(localStorage.getItem('tierMappings') || '{}'); } catch (e) { state.tierMappings = {}; } render(); }
+  function render() { closeOpenDropdown(); var snap = capturePageState(); container.innerHTML = ''; var pageCls = 'page' + (state.screen === 4 ? ' page-dashboard' : ''); var page = el('main', pageCls); page.appendChild(header()); page.appendChild(buildStepper()); var content = state.screen === 0 ? buildUpload() : (state.screen === 1 ? buildMapping() : (state.screen === 2 ? buildAmounts() : (state.screen === 3 ? buildAllocation() : (state.screen === 4 ? buildDashboard() : buildExport())))); var stack = el('div', 'screen-stack'); var loadNotice = loadFailureNotice(); if (loadNotice) stack.appendChild(loadNotice); stack.appendChild(content); page.appendChild(stack); container.appendChild(page); restorePageState(snap); }
+  function initTheme() {
+    try {
+      var saved = localStorage.getItem('themePreference');
+      if (saved === 'light' || saved === 'dark' || saved === 'system') themeMode = saved;
+    } catch (e) {}
+  }
+
+  function applyTheme(mode) {
+    themeMode = mode;
+    if (mode === 'light' || mode === 'dark') document.documentElement.setAttribute('data-theme', mode);
+    else document.documentElement.removeAttribute('data-theme');
+    try { localStorage.setItem('themePreference', mode); } catch (e) {}
+  }
+
+  function themeSwitch() {
+    var wrap = el('div', 'theme-switch');
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', 'وضع الألوان');
+    [['light', 'sun', 'فاتح'], ['dark', 'moon', 'داكن'], ['system', 'monitor', 'حسب النظام']].forEach(function (opt) {
+      var active = themeMode === opt[0];
+      var b = el('button', 'theme-switch-btn' + (active ? ' active' : ''), [iconEl(opt[1])]);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      b.setAttribute('aria-label', opt[2]);
+      b.title = opt[2];
+      b.addEventListener('click', function () { applyTheme(opt[0]); render(); });
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+
+  function boot(target) { container = target; initTheme(); state = makeInitialState(); try { state.tierMappings = JSON.parse(localStorage.getItem('tierMappings') || '{}'); } catch (e) { state.tierMappings = {}; } render(); }
   return {
     boot: boot,
     showToast: showToast,

@@ -2791,7 +2791,7 @@ var App = (function () {
 
   function buildDashboard() {
     var fragment = document.createDocumentFragment();
-    fragment.appendChild(heading('لوحة المعلومات', 'الأرقام أدناه محسوبة على كامل العدد. البحث والتصفية للعرض فقط ولا يعيدان التوزيع.'));
+    fragment.appendChild(heading('لوحة المعلومات', 'الأرقام أدناه محسوبة على كامل العدد. البحث والفلاتر للعرض فقط ولا يعيدان التوزيع.'));
     if (!state.result || !state.result.ok) { fragment.appendChild(noticeEl('danger', [iconEl('alert'), 'تعذر عرض النتائج: ' + ((state.result && state.result.errors && state.result.errors[0] && state.result.errors[0].message) || 'راجع البيانات')])); return fragment; }
     var peopleResult = state.result.people;
     var gross = peopleResult.reduce(function (s, p) { return s + p.grossPiastres; }, 0) / 100;
@@ -2883,7 +2883,7 @@ var App = (function () {
     return fragment;
   }
 
-  var DETAIL_HEADER = ['الاسم', 'الوظيفة', 'الإدارة', 'الفئة', 'المجمع', 'الوزن الأساسي', 'معامل الأيام', 'نسبة الجزاء', 'الوزن الفعلي', 'الإجمالي', 'الضريبة', 'الصافي', 'الصافي المستهدف', 'الفرق'];
+  var DETAIL_HEADER = ['الاسم', 'الوظيفة', 'الإدارة', 'الفئة', 'المجمع', 'الوزن الأساسي', 'معامل الأيام', 'نسبة الجزاء', 'الوزن الفعلي', 'الإجمالي', 'الخصم', 'الصافي', 'الصافي المستهدف', 'الفرق'];
 
   function detailRows(people) {
     var rows = [DETAIL_HEADER.slice()];
@@ -2919,7 +2919,7 @@ var App = (function () {
       ['نصيب النقطة k', state.result.k],
       ['المعادلة', 'الوزن الفعلي = القيمة الأساسية × معامل الأيام × (1 − نسبة الجزاء) × المعامل اليدوي'],
       ['التوزيع', 'الإجمالي للشخص = إجمالي المجمع × وزن الشخص ÷ مجموع أوزان المجمع'],
-      ['الضريبة', 'الضريبة = تقريب(الإجمالي × نسبة ضريبة المجمع) والصافي = الإجمالي − الضريبة'],
+      ['الخصم', 'الخصم = تقريب(الإجمالي × نسبة خصم المجمع) والصافي = الإجمالي − الخصم'],
       ['التقريب', 'أكبر باقي بأجزاء القروش مع أولوية الوزن الأكبر ثم رقم الصف'],
       ['وحدة التقريب', state.options.roundingStep === 100 ? 'جنيه واحد — يتم تعديل إجمالي كل مجمع لأقرب جنيه قبل التوزيع' : 'قرش واحد — دقة كاملة'],
       []
@@ -2933,7 +2933,7 @@ var App = (function () {
     if (example && exampleResult) {
       rows.push([]);
       rows.push(['مثال قابل للمراجعة']);
-      rows.push(['الموظف', example.name, 'الفئة', example.tier, 'الوزن', exampleResult.weight, 'المجمع', exampleResult.pool, 'الإجمالي', Engine.fromPiastres(exampleResult.grossPiastres), 'الضريبة', Engine.fromPiastres(exampleResult.taxPiastres), 'الصافي', Engine.fromPiastres(exampleResult.netPiastres), 'الصافي المستهدف', exampleResult.idealNetEGP]);
+      rows.push(['الموظف', example.name, 'الفئة', example.tier, 'الوزن', exampleResult.weight, 'المجمع', exampleResult.pool, 'الإجمالي', Engine.fromPiastres(exampleResult.grossPiastres), 'الخصم', Engine.fromPiastres(exampleResult.taxPiastres), 'الصافي', Engine.fromPiastres(exampleResult.netPiastres), 'الصافي المستهدف', exampleResult.idealNetEGP]);
     }
     return rows;
   }
@@ -3104,7 +3104,7 @@ var App = (function () {
     generalPanel.appendChild(el('div', 'settings-panel-intro', ['هذه الخيارات تؤثر على طريقة الحساب والعرض، وليس على بيانات الموظفين الأصلية.']));
     var generalGrid = el('div', 'settings-grid');
     var rounding = el('div', 'settings-input-card'); rounding.appendChild(el('div', null, [el('div', 'pool-name', ['وحدة التقريب']), el('div', 'field-help', ['الافتراضي قرش واحد للحفاظ على الدقة'])])); var roundingOptions = [{ value: '1', label: 'قرش واحد — دقة كاملة' }, { value: '100', label: 'جنيه واحد — تقريب اختياري' }]; var roundingSelect = customSelect(roundingOptions, String(state.options.roundingStep), function (v) { state.options.roundingStep = Number(v); persistSettings(); recompute(); }); rounding.appendChild(roundingSelect); generalGrid.appendChild(rounding);
-    generalPanel.appendChild(generalGrid); generalPanel.appendChild(el('div', 'settings-note', ['تصفية لوحة المعلومات لا تعيد تشغيل المحرك؛ فهي تغيّر العرض فقط وتحافظ على نفس المبالغ المحسوبة.'])); panels.general = generalPanel; modal.appendChild(generalPanel);
+    generalPanel.appendChild(generalGrid); generalPanel.appendChild(el('div', 'settings-note', ['فلاتر لوحة المعلومات لا تعيد تشغيل المحرك؛ فهي تغيّر العرض فقط وتحافظ على نفس المبالغ المحسوبة.'])); panels.general = generalPanel; modal.appendChild(generalPanel);
     activate('tiers');
     var reset = button('استعادة القيم الافتراضية', 'btn-danger-ghost', function () { state.tiers = clone(DemoData.TIERS); state.pools = clone(DemoData.POOLS); state.options.roundingStep = 1; persistSettings(); recompute(); close(); render(); });
     modal.appendChild(el('div', 'settings-footer', [reset, button('حفظ الإعدادات', 'btn-primary', function () { persistSettings(); close(); render(); })]));

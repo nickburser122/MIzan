@@ -2646,7 +2646,7 @@ var App = (function () {
   }
 
   function buildAllocation() {
-    var fragment = document.createDocumentFragment(); fragment.appendChild(heading('التوزيع والحالات الخاصة', 'التوزيع محسوب على كامل السكان. تثبيت المجمع من القائمة يقفل الشخص عليه، ولا تغيّر الفلاتر الحساب.'));
+    var fragment = document.createDocumentFragment(); fragment.appendChild(heading('التوزيع والحالات الخاصة', 'التوزيع محسوب على كامل العدد. تثبيت المجمع من القائمة يقفل الشخص عليه، ولا تغيّر الفلاتر الحساب.'));
     if (!state.result || !state.result.ok) { fragment.appendChild(noticeEl('danger', [iconEl('alert'), (state.result && state.result.errors && state.result.errors[0] && state.result.errors[0].message) || 'أكمل البيانات قبل الحساب.'])); return fragment; }
     var tools = el('div', 'toolbar-card card toolbar-card-plain');
     tools.appendChild(button('إعادة التوزيع التلقائي', 'btn-primary', function () { recompute(); render(); }));
@@ -2791,7 +2791,7 @@ var App = (function () {
 
   function buildDashboard() {
     var fragment = document.createDocumentFragment();
-    fragment.appendChild(heading('لوحة المعلومات', 'الأرقام أدناه محسوبة على كامل البيانات. البحث والتصفية للعرض فقط ولا يعيدان التوزيع.'));
+    fragment.appendChild(heading('لوحة المعلومات', 'الأرقام أدناه محسوبة على كامل العدد. البحث والتصفية للعرض فقط ولا يعيدان التوزيع.'));
     if (!state.result || !state.result.ok) { fragment.appendChild(noticeEl('danger', [iconEl('alert'), 'تعذر عرض النتائج: ' + ((state.result && state.result.errors && state.result.errors[0] && state.result.errors[0].message) || 'راجع البيانات')])); return fragment; }
     var peopleResult = state.result.people;
     var gross = peopleResult.reduce(function (s, p) { return s + p.grossPiastres; }, 0) / 100;
@@ -3032,7 +3032,7 @@ var App = (function () {
       ['إجمالي الخصومات', Engine.fromPiastres(taxPi)],
       ['الصافي', Engine.fromPiastres(netPi)],
       ['نصيب النقطة', state.result.k],
-      ['الأرقام محسوبة على كامل السكان ولا تتأثر بفلاتر العرض']
+      ['الأرقام محسوبة على كامل العدد ولا تتأثر بفلاتر العرض']
     ];
   }
 
@@ -3064,7 +3064,7 @@ var App = (function () {
     });
     appendSheet(wb, used, 'الحالات الخاصة', detailRows(specialCasePeople()), detailOpts);
     window.XLSX.writeFile(wb, sanitizeFilename((state.title || 'تقرير الحوافز') + ' - ' + (state.period || '')) + '.xlsx');
-    showToast('تم تنزيل ملف Excel — الإجماليات محسوبة على كامل السكان');
+    showToast('تم تنزيل ملف Excel — الإجماليات محسوبة على كامل العدد');
   }
 
   function saveProject() { var payload = clone(state); payload.result = null; payload.history = []; downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }), sanitizeFilename(state.title || 'مشروع الحوافز') + '.json'); showToast('تم حفظ المشروع كملف JSON'); }
@@ -3160,7 +3160,7 @@ var App = (function () {
     exportCard.appendChild(el('div', 'export-list', [
       el('div', null, ['اسم الملف: ' + state.title + ' - ' + state.period]),
       el('div', null, ['الأوراق: الملخص التنفيذي، المنهجية، التفصيل الكامل، مجمعات الأموال، الحالات الخاصة']),
-      el('div', null, ['يشمل كامل السكان: ' + state.people.length + ' صفًا — الفلاتر لا تغيّر الإجماليات'])
+      el('div', null, ['يشمل كامل العدد: ' + state.people.length + ' صفًا — الفلاتر لا تغيّر الإجماليات'])
     ]));
     var exportBtn = el('button', 'btn btn-primary', [iconEl('download'), 'تنزيل تقرير Excel']);
     exportBtn.type = 'button';

@@ -1,6 +1,6 @@
 var APP_NAME = 'ميزان';
 var APP_NAME_LATIN = 'Mizan';
-var APP_VERSION = '1.1.0';
+var APP_VERSION = '1.2.0';
 var BRAND_MARK_SVG = '<svg viewBox="0 0 100 100" role="img" aria-label="' + APP_NAME + '"><defs><linearGradient id="bm-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E58B66"/><stop offset="1" stop-color="#C75E3D"/></linearGradient></defs><rect width="100" height="100" rx="26" fill="url(#bm-grad)"/><g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><path d="M50 28v46M37 76h26M22 36h56" stroke-width="6"/><path d="M26 37l-9 21M26 37l9 21M74 37l-9 21M74 37l9 21" stroke-width="3.5"/></g><g fill="#fff"><circle cx="50" cy="25" r="5"/><path d="M13 58h26a13 13 0 0 1-26 0zM61 58h26a13 13 0 0 1-26 0z"/></g></svg>';
 
 var App = (function () {
@@ -207,9 +207,13 @@ var App = (function () {
     if (isObj(saved.pools) && Object.keys(saved.pools).length) next.pools = sanitizePools(saved.pools);
     if (isObj(saved.options)) next.options.roundingStep = saved.options.roundingStep === 100 ? 100 : 1;
     if (Array.isArray(saved.people)) {
+      var seenIds = {};
       next.people = saved.people.filter(isObj).map(function (p, i) {
+        var pid = (typeof p.id === 'number' || typeof p.id === 'string') && !seenIds['k' + p.id] ? p.id : null;
+        if (pid == null) { pid = i + 1; while (seenIds['k' + pid]) pid += 100000; }
+        seenIds['k' + pid] = true;
         return {
-          id: p.id != null ? p.id : i + 1,
+          id: pid,
           name: String(p.name || ''), job: String(p.job || ''), dept: String(p.dept || 'غير محدد'),
           tier: p.tier == null ? '' : String(p.tier), rawTier: String(p.rawTier != null ? p.rawTier : (p.tier || '')),
           overrideValue: parseNumber(p.overrideValue), daysWorked: parseNumber(p.daysWorked), penaltyRate: parseNumber(p.penaltyRate),
@@ -662,8 +666,14 @@ var App = (function () {
     return n;
   }
 
+  var ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+  function arabicDigits(n) { return String(n).replace(/[0-9]/g, function (d) { return ARABIC_DIGITS[Number(d)]; }); }
+
   function screenHead(eyebrow, title, subtitle, aside) {
     var wrap = el('header', 'screen-head');
+    var folio = el('div', 'folio', [el('div', 'folio-num', [arabicDigits(state.screen + 1)]), el('div', 'folio-of', ['من ' + arabicDigits(STATIONS.length)])]);
+    folio.setAttribute('aria-hidden', 'true');
+    wrap.appendChild(folio);
     var copy = el('div', null, [el('div', 'eyebrow', [eyebrow]), el('h1', null, [title]), subtitle ? el('p', null, [subtitle]) : null]);
     wrap.appendChild(copy);
     if (aside) wrap.appendChild(el('div', 'screen-head-aside', aside));
@@ -759,39 +769,113 @@ var App = (function () {
     });
   }
 
-  function buildTopbar(validation) {
-    var bar = el('header', 'topbar');
-    var inner = el('div', 'topbar-inner');
-    var mark = el('div', 'brand-mark'); mark.innerHTML = BRAND_MARK_SVG;
-    var sub = el('div', 'brand-subtitle', ['توزيع عادل قابل للمراجعة ']);
-    var link = el('a', 'brand-link', ['· قسمة ↗']);
-    link.href = 'https://shareholders-coral.vercel.app/'; link.target = '_blank'; link.rel = 'noopener noreferrer';
-    sub.appendChild(link);
-    inner.appendChild(el('div', 'brand', [mark, el('div', null, [el('div', 'brand-title', [APP_NAME]), sub])]));
+  function stationMeta(i, validation) {
+    var ok = state.result && state.result.ok;
+    if (i === 0) return state.people.length ? (state.fileName || 'ملف حالي') : 'Excel أو CSV';
+    if (!state.people.length) return '';
+    if (i === 1) return validation.ok ? state.people.length + ' موظفًا · سليم' : 'بحاجة لمراجعة';
+    if (!validation.ok) return '';
+    if (i === 2) {
+      var net = Object.keys(state.pools).reduce(function (s, n) { return s + state.pools[n].gross * (1 - state.pools[n].taxRate); }, 0);
+      return net > 0 ? 'صافٍ ' + formatEGP(net, 0) + ' ج.م' : 'أدخل المبالغ';
+    }
+    if (i === 3) { var sp = state.people.filter(isSpecial).length; return sp ? sp + ' حالة خاصة' : 'بلا تعديلات'; }
+    if (i === 4) return ok ? 'موزّع على ' + Object.keys(state.pools).length + ' مجمعات' : '';
+    if (i === 5) return ok ? 'Excel · CSV · JSON' : '';
+    return '';
+  }
 
-    var steps = el('nav', 'steps');
-    steps.setAttribute('aria-label', 'خطوات العمل');
+  var lastTilt = null;
+
+  function balanceTilt() {
+    if (!state.result || !state.result.ok) return 7;
+    var worst = 0;
+    Object.keys(state.result.poolResults).forEach(function (n) {
+      var d = state.result.poolResults[n].deviation;
+      if (d != null && isFinite(d) && Math.abs(d) > Math.abs(worst)) worst = d;
+    });
+    return Math.round(Engine.clamp(worst * 350, -9, 9) * 10) / 10;
+  }
+
+  function buildBalance() {
+    var ok = state.result && state.result.ok;
+    var tilt = balanceTilt();
+    var from = lastTilt == null ? 0 : lastTilt;
+    var moving = lastTilt !== tilt;
+    lastTilt = tilt;
+    var box = el('section', 'balance' + (ok ? '' : ' is-idle') + (moving ? ' is-moving' : ''));
+    box.setAttribute('aria-label', 'ميزان التوزيع');
+    var dy = function (deg) { return Math.round(44 * Math.sin(deg * Math.PI / 180) * 100) / 100; };
+    var svgNs = 'http://www.w3.org/2000/svg';
+    var holder = document.createElement('div');
+    holder.innerHTML = '<svg class="balance-glyph" viewBox="0 0 120 62" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" xmlns="' + svgNs + '">' +
+      '<path d="M60 14v42M46 57h28"/>' +
+      '<g class="beam-group"><path d="M16 14h88" stroke-width="2"/></g>' +
+      '<g class="pan-r"><path d="M104 14l-10 22M104 14l10 22"/><path class="pan" d="M92 36h24a12 12 0 0 1-24 0z"/></g>' +
+      '<g class="pan-l"><path d="M16 14l-10 22M16 14l10 22"/><path class="pan" d="M4 36h24a12 12 0 0 1-24 0z"/></g>' +
+      '<circle cx="60" cy="14" r="3.2" fill="currentColor" stroke="none"/></svg>';
+    var svg = holder.firstChild;
+    svg.style.setProperty('--from', from + 'deg');
+    svg.style.setProperty('--to', tilt + 'deg');
+    svg.style.setProperty('--pr-from', dy(from) + 'px');
+    svg.style.setProperty('--pr-to', dy(tilt) + 'px');
+    svg.style.setProperty('--pl-from', (-dy(from)) + 'px');
+    svg.style.setProperty('--pl-to', (-dy(tilt)) + 'px');
+    var status;
+    if (!ok) status = el('span', 'badge badge-neutral', [state.people.length ? 'بانتظار الحساب' : 'فارغ']);
+    else if (Math.abs(tilt) < 0.6) status = el('span', 'badge badge-success', ['متزن']);
+    else status = el('span', 'badge badge-warning', ['انحراف طفيف']);
+    box.appendChild(el('div', 'balance-head', [el('span', 'balance-title', ['نصيب النقطة']), status]));
+    box.appendChild(svg);
+    box.appendChild(el('div', 'balance-k tabular', [num(ok ? formatEGP(state.result.k, 4) : '—'), ok ? el('span', 'kpi-unit', ['ج.م']) : null]));
+    var eligible = ok ? state.result.people.filter(function (r) { return r.netPiastres > 0; }).length : 0;
+    box.appendChild(el('div', 'balance-foot', ok ? [el('span', null, [num(String(eligible)), ' مستحق']), el('span', null, [num(formatEGP(state.result.N, 0)), ' ج.م صافٍ'])] : [el('span', null, ['يظهر بعد إدخال المبالغ'])]));
+    return box;
+  }
+
+  function buildRail(validation) {
+    var rail = el('aside', 'rail');
+    rail.id = 'rail';
+    var mark = el('div', 'brand-mark'); mark.innerHTML = BRAND_MARK_SVG;
+    var brand = el('div', 'brand', [mark, el('div', 'brand-text', [el('div', 'brand-title', [APP_NAME]), el('div', 'brand-latin', [APP_NAME_LATIN])])]);
+    var link = el('a', 'brand-link', ['قسمة ↗']);
+    link.href = 'https://shareholders-coral.vercel.app/'; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    var tagline = el('p', 'brand-tagline', ['توزيع الحوافز بالعدل، بأرقام تقبل المراجعة حتى القرش. من عائلة ', link]);
+    rail.appendChild(el('div', 'rail-head', [brand, tagline]));
+
+    var nav = el('nav', 'route');
+    nav.setAttribute('aria-label', 'خطوات العمل');
+    nav.appendChild(el('div', 'rail-label', ['المسار']));
+    nav.appendChild(el('div', 'route-caption', [el('strong', null, [STATIONS[state.screen]]), el('span', 'num-of', [arabicDigits(state.screen + 1) + ' / ' + arabicDigits(STATIONS.length)])]));
+    var list = el('ol', 'route-list');
     STATIONS.forEach(function (label, i) {
       var cls = i === state.screen ? 'is-current' : (i < state.screen ? 'is-done' : '');
-      var numEl = el('span', 'step-num', [i < state.screen ? iconEl('check') : String(i + 1)]);
-      var b = el('button', 'step ' + cls, [numEl, el('span', 'step-label', [label])]);
+      var li = el('li', 'route-item ' + cls);
+      var b = el('button', 'station', [
+        el('span', 'station-num', [el('span', null, [arabicDigits(i + 1)])]),
+        el('span', 'station-text', [el('span', 'station-label', [label]), el('span', 'station-meta', [stationMeta(i, validation)])])
+      ]);
       b.type = 'button';
       b.id = 'step-' + i;
       b.disabled = !canVisit(i, validation);
       if (i === state.screen) b.setAttribute('aria-current', 'step');
       b.setAttribute('aria-label', (i + 1) + '. ' + label);
+      b.title = label;
       b.addEventListener('click', function () { goTo(i); });
-      steps.appendChild(b);
+      li.appendChild(b);
+      list.appendChild(li);
     });
-    inner.appendChild(steps);
+    nav.appendChild(list);
+    rail.appendChild(nav);
 
-    var actions = el('div', 'top-actions');
-    actions.appendChild(themeSwitch());
-    actions.appendChild(button('الإعدادات', 'btn-quiet btn-sm', openSettings, { icon: 'settings', labelClass: 'btn-label', id: 'top-settings' }));
-    actions.appendChild(button('', 'btn-quiet btn-sm btn-icon', saveProject, { icon: 'save', title: 'حفظ المشروع (Ctrl+S)', disabled: !state.people.length, id: 'top-save' }));
-    inner.appendChild(actions);
-    bar.appendChild(inner);
-    return bar;
+    rail.appendChild(buildBalance());
+
+    var tools = el('div', 'rail-tools', [
+      button('', 'btn-quiet btn-sm btn-icon', openSettings, { icon: 'settings', title: 'الإعدادات', id: 'top-settings' }),
+      button('', 'btn-quiet btn-sm btn-icon', saveProject, { icon: 'save', title: 'حفظ المشروع (Ctrl+S)', disabled: !state.people.length, id: 'top-save' })
+    ]);
+    rail.appendChild(el('div', 'rail-foot', [themeSwitch(), tools]));
+    return rail;
   }
 
   function themeSwitch() {
@@ -816,7 +900,7 @@ var App = (function () {
     var bar = el('div', 'action-bar');
     var inner = el('div', 'action-bar-inner');
     inner.appendChild(spec.back ? button(spec.back.label, 'btn-ghost', spec.back.fn, { icon: 'arrowBack', id: 'nav-back' }) : el('span'));
-    inner.appendChild(el('div', 'action-bar-status', [spec.status || '']));
+    inner.appendChild(el('div', 'action-bar-status', [el('span', 'action-bar-folio', [arabicDigits(state.screen + 1) + ' · ' + STATIONS[state.screen]]), spec.status || '']));
     if (spec.next) {
       var n = el('button', 'btn ' + (spec.next.cls || 'btn-accent'), [el('span', null, [spec.next.label]), spec.next.icon === false ? null : iconEl(spec.next.icon || 'arrowNext')]);
       n.type = 'button';
@@ -870,7 +954,7 @@ var App = (function () {
     zone.addEventListener('dragenter', function (e) { e.preventDefault(); depth++; zone.classList.add('dragging'); });
     zone.addEventListener('dragover', function (e) { e.preventDefault(); });
     zone.addEventListener('dragleave', function () { depth = Math.max(0, depth - 1); if (!depth) zone.classList.remove('dragging'); });
-    zone.addEventListener('drop', function (e) { e.preventDefault(); depth = 0; zone.classList.remove('dragging'); if (e.dataTransfer.files[0]) importFile(e.dataTransfer.files[0]); });
+    zone.addEventListener('drop', function (e) { e.preventDefault(); depth = 0; zone.classList.remove('dragging'); var dropped = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (dropped) importFile(dropped); });
     input.addEventListener('change', function () { if (input.files[0]) importFile(input.files[0]); input.value = ''; });
     nodes.push(zone);
     nodes.push(input);
@@ -1355,7 +1439,8 @@ var App = (function () {
       table.appendChild(body);
       scroll.appendChild(table);
       card.appendChild(scroll);
-      card.appendChild(buildPager(filtered.length));
+      var allocPager = buildPager(filtered.length);
+      if (allocPager) card.appendChild(allocPager);
       nodes.push(card);
     }
     return {
@@ -1477,7 +1562,8 @@ var App = (function () {
       table.appendChild(body);
       scroll.appendChild(table);
       card.appendChild(scroll);
-      card.appendChild(buildPager(rows.length));
+      var dashPager = buildPager(rows.length);
+      if (dashPager) card.appendChild(dashPager);
       nodes.push(card);
     }
     return {
@@ -1669,6 +1755,7 @@ var App = (function () {
 
   function loadProject(file) {
     var reader = new FileReader();
+    reader.onerror = function () { showToast('تعذر قراءة ملف المشروع'); };
     reader.onload = function () {
       try {
         var next = hydrate(JSON.parse(String(reader.result)));
@@ -1888,14 +1975,18 @@ var App = (function () {
     var builders = [buildUpload, buildMapping, buildAmounts, buildAllocation, buildDashboard, buildExport];
     var spec = builders[state.screen](validation);
     var frag = document.createDocumentFragment();
-    frag.appendChild(buildTopbar(validation));
+    var shell = el('div', 'shell');
+    shell.appendChild(buildRail(validation));
+    var stage = el('div', 'stage');
     var main = el('main', 'page');
     main.id = 'main';
     var screen = el('div', 'screen' + (screenChanged ? ' screen-enter is-entering' : ''));
     spec.nodes.forEach(function (n) { if (n) screen.appendChild(n); });
     main.appendChild(screen);
-    frag.appendChild(main);
-    frag.appendChild(buildActionBar(spec));
+    stage.appendChild(main);
+    stage.appendChild(buildActionBar(spec));
+    shell.appendChild(stage);
+    frag.appendChild(shell);
     container.innerHTML = '';
     container.appendChild(frag);
     if (screenChanged) {
@@ -1923,7 +2014,7 @@ var App = (function () {
     if (!mod) return;
     var key = e.key.toLowerCase();
     var tag = (e.target && e.target.tagName) || '';
-    if (key === 's') { e.preventDefault(); saveProject(); return; }
+    if (key === 's') { e.preventDefault(); if (state.people.length) saveProject(); else showToast('لا يوجد مشروع للحفظ بعد'); return; }
     if (key === 'z' && !e.shiftKey && state.screen === 3 && tag !== 'INPUT' && tag !== 'TEXTAREA') { e.preventDefault(); undo(); }
   }
 
